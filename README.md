@@ -1,3 +1,4 @@
+<img width="4156" height="2246" alt="mock" src="https://github.com/user-attachments/assets/84414be4-44dc-49e4-8030-b056a6580fd5" />
 # Apple-TV-Blur
 
 An iOS SwiftUI package for Apple TV-style progressive backdrop blur. Place the
