@@ -58,12 +58,18 @@ The package wraps `UIVisualEffectView`, creates a Core Image gradient mask, and
 applies that mask to the backdrop layer’s blur radius. The result is a live blur
 of the content behind the view rather than a captured screenshot.
 
+The SwiftUI wrapper updates the existing UIKit view when its parameters change,
+so it can be driven by state without recreating the view. If the progressive
+filter or its gradient cannot be created, the view restores a regular system
+blur instead of failing or becoming transparent.
+
 ## Platform note
 
 The progressive blur relies on iOS’s undocumented `variableBlur` Core Animation
 filter. Apple may change or remove it in a future release, and its use may carry
-App Store review risk. Test every supported iOS version and provide a fallback
-such as `.ultraThinMaterial`, a regular `UIBlurEffect`, or an opaque gradient.
+App Store review risk. The package automatically falls back to a regular
+`UIBlurEffect` when the progressive filter is unavailable. Test every supported
+iOS version before shipping.
 
 ## Contributing
 

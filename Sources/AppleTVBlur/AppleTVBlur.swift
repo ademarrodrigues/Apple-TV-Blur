@@ -33,35 +33,74 @@ public struct AppleTVBlur: UIViewRepresentable {
         )
     }
 
-    public func updateUIView(_ uiView: AppleTVBlurView, context: Context) {}
+    public func updateUIView(_ uiView: AppleTVBlurView, context: Context) {
+        uiView.update(
+            maxBlurRadius: maxBlurRadius,
+            direction: direction,
+            startOffset: startOffset
+        )
+    }
 }
 
 /// UIKit view that applies the progressive blur to its backdrop.
 ///
 /// This uses iOS’s undocumented `variableBlur` Core Animation filter.
 open class AppleTVBlurView: UIVisualEffectView {
+    private var maxBlurRadius: CGFloat
+    private var direction: AppleTVBlurDirection
+    private var startOffset: CGFloat
+
     public init(
         maxBlurRadius: CGFloat = 20,
         direction: AppleTVBlurDirection = .blurredTopClearBottom,
         startOffset: CGFloat = 0
     ) {
+        self.maxBlurRadius = maxBlurRadius
+        self.direction = direction
+        self.startOffset = startOffset
         super.init(effect: UIBlurEffect(style: .regular))
+        applyConfiguration()
+    }
 
+    /// Updates the blur without recreating the underlying UIKit view.
+    public func update(
+        maxBlurRadius: CGFloat,
+        direction: AppleTVBlurDirection,
+        startOffset: CGFloat
+    ) {
+        self.maxBlurRadius = maxBlurRadius
+        self.direction = direction
+        self.startOffset = startOffset
+        applyConfiguration()
+    }
+
+    private func applyConfiguration() {
         let filterClassName = String("retliFAC".reversed())
         guard let filterClass = NSClassFromString(filterClassName) as? NSObject.Type,
               let filter = filterClass.perform(
                 NSSelectorFromString(String(":epyThtiWretlif".reversed())),
                 with: "variableBlur"
               )?.takeUnretainedValue() as? NSObject,
-              let backdropLayer = subviews.first?.layer else { return }
+              let backdropLayer = subviews.first?.layer,
+              let gradient = makeGradient(direction: direction, startOffset: startOffset) else {
+            restoreSystemBlur()
+            return
+        }
 
         filter.setValue(maxBlurRadius, forKey: "inputRadius")
-        filter.setValue(makeGradient(direction: direction, startOffset: startOffset), forKey: "inputMaskImage")
+        filter.setValue(gradient, forKey: "inputMaskImage")
         filter.setValue(true, forKey: "inputNormalizeEdges")
         backdropLayer.filters = [filter]
 
         for subview in subviews.dropFirst() {
             subview.alpha = 0
+        }
+    }
+
+    private func restoreSystemBlur() {
+        effect = UIBlurEffect(style: .regular)
+        for subview in subviews.dropFirst() {
+            subview.alpha = 1
         }
     }
 
@@ -79,7 +118,7 @@ open class AppleTVBlurView: UIVisualEffectView {
         direction: AppleTVBlurDirection,
         startOffset: CGFloat,
         size: CGFloat = 100
-    ) -> CGImage {
+    ) -> CGImage? {
         let filter = CIFilter.linearGradient()
         filter.color0 = .black
         filter.color1 = .clear
@@ -91,9 +130,10 @@ open class AppleTVBlurView: UIVisualEffectView {
             filter.point1.y = size - filter.point1.y
         }
 
+        guard let outputImage = filter.outputImage else { return nil }
         return CIContext().createCGImage(
-            filter.outputImage!,
+            outputImage,
             from: CGRect(x: 0, y: 0, width: size, height: size)
-        )!
+        )
     }
 }
